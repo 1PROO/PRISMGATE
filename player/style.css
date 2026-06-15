@@ -439,3 +439,116 @@ html, body {
   .channel-panel { width: 100%; min-width: auto; height: 200px; border-left: none; border-bottom: 1px solid var(--border); }
   .login-card { padding: 32px 24px; }
 }
+
+/* ─── SELECTION SCREEN ─── */
+.selection-bg {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #0d0b14 0%, #1a1230 50%, #0d0b14 100%);
+  position: relative; overflow: hidden;
+}
+.selection-bg::before {
+  content: '';
+  position: absolute; width: 500px; height: 500px;
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+  top: -100px; right: -100px; border-radius: 50%;
+  animation: pulse 8s ease-in-out infinite;
+}
+.selection-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px;
+  width: 800px; max-width: 95vw;
+  backdrop-filter: blur(20px);
+  z-index: 1;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  text-align: center;
+}
+.selection-header h1 {
+  font-size: 28px; font-weight: 900; margin-bottom: 8px; color: var(--text-primary);
+}
+.selection-header p {
+  font-size: 15px; color: var(--text-secondary); margin-bottom: 32px;
+}
+.selection-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 32px;
+}
+.select-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 20px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-family: var(--font);
+  transition: all 0.2s ease;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.select-card i {
+  font-size: 48px; color: var(--accent);
+  transition: transform 0.2s;
+}
+.select-card h2 {
+  font-size: 18px; font-weight: 700;
+}
+.select-card:hover, .select-card:focus {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+  box-shadow: 0 8px 24px var(--accent-glow);
+  transform: translateY(-4px);
+  outline: none;
+}
+.select-card:hover i {
+  transform: scale(1.1);
+}
+.btn-logout-selection {
+  background: rgba(255, 77, 79, 0.15);
+  border: 1px solid rgba(255, 77, 79, 0.3);
+  color: #ff4d4f;
+  padding: 12px 24px;
+  border-radius: var(--radius);
+  font-family: var(--font);
+  font-size: 15px; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-logout-selection:hover, .btn-logout-selection:focus {
+  background: rgba(255, 77, 79, 0.3);
+  box-shadow: 0 4px 12px rgba(255, 77, 79, 0.2);
+  outline: none;
+}
+
+.btn-back-series {
+  background: none; border: none;
+  color: var(--accent-light);
+  font-family: var(--font);
+  font-size: 16px; font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 0;
+}
+.btn-back-series:hover, .btn-back-series:focus {
+  color: var(--text-primary);
+  outline: none;
+}
+
+@media (max-width: 768px) {
+  .selection-cards {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .select-card {
+    padding: 20px;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 20px;
+    text-align: right;
+  }
+  .select-card i {
+    font-size: 32px;
+  }
+}

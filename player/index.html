@@ -41,6 +41,35 @@
     </div>
   </div>
 
+  <!-- ═══════ SELECTION SCREEN ═══════ -->
+  <div id="selection-screen" class="screen">
+    <div class="selection-bg">
+      <div class="selection-container">
+        <div class="selection-header">
+          <h1>ماذا تريد أن تشاهد اليوم؟</h1>
+          <p>اختر نوع المحتوى للبدء في التصفح والتشغيل</p>
+        </div>
+        <div class="selection-cards">
+          <button class="select-card" id="btn-select-live" tabindex="1">
+            <i class="bi bi-broadcast"></i>
+            <h2>بث مباشر (Live TV)</h2>
+          </button>
+          <button class="select-card" id="btn-select-movies" tabindex="2">
+            <i class="bi bi-film"></i>
+            <h2>أفلام (Movies)</h2>
+          </button>
+          <button class="select-card" id="btn-select-series" tabindex="3">
+            <i class="bi bi-collection-play"></i>
+            <h2>مسلسلات (Series)</h2>
+          </button>
+        </div>
+        <button class="btn-logout-selection" id="btn-logout-select" tabindex="4">
+          <i class="bi bi-power"></i> تسجيل الخروج
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══════ MAIN TV INTERFACE ═══════ -->
   <div id="main-screen" class="screen">
     <!-- Top Bar -->
@@ -54,6 +83,9 @@
       </div>
       <div class="topbar-right">
         <span id="clock"></span>
+        <button class="btn-icon" id="btn-home" tabindex="899" title="الرئيسية" style="margin-left: 8px;">
+          <i class="bi bi-house"></i>
+        </button>
         <button class="btn-icon" id="btn-logout" tabindex="900" title="Logout">
           <i class="bi bi-power"></i>
         </button>

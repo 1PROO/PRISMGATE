@@ -17,6 +17,10 @@ let STATE = {
   hlsInstance: null,
   fsHlsInstance: null,
   fsOverlayTimer: null,
+  mode: "live", // "live", "movies", "series"
+  selectedSeries: null,
+  selectedSeason: null,
+  activeEpisodes: null,
 };
 
 // ═══════ DOM ELEMENTS ═══════
@@ -24,6 +28,7 @@ const $ = (id) => document.getElementById(id);
 
 const DOM = {
   loginScreen: $("login-screen"),
+  selectionScreen: $("selection-screen"),
   mainScreen: $("main-screen"),
   loginForm: $("login-form"),
   username: $("username"),
@@ -41,6 +46,7 @@ const DOM = {
   playerErrorMsg: $("player-error-msg"),
   btnRetry: $("btn-retry"),
   btnLogout: $("btn-logout"),
+  btnHome: $("btn-home"),
   nowPlaying: $("now-playing"),
   clock: $("clock"),
   fullscreenPlayer: $("fullscreen-player"),
@@ -49,6 +55,10 @@ const DOM = {
   fsTitle: $("fs-title"),
   fsBack: $("fs-back"),
   fsClock: $("fs-clock"),
+  btnSelectLive: $("btn-select-live"),
+  btnSelectMovies: $("btn-select-movies"),
+  btnSelectSeries: $("btn-select-series"),
+  btnLogoutSelect: $("btn-logout-select"),
 };
 
 // ═══════ UTILS ═══════
@@ -105,11 +115,19 @@ async function authenticate() {
 }
 
 async function getCategories() {
-  return await apiCall("get_live_categories");
+  let action = "get_live_categories";
+  if (STATE.mode === "movies") action = "get_vod_categories";
+  else if (STATE.mode === "series") action = "get_series_categories";
+  return await apiCall(action);
 }
 
 async function getStreams(categoryId) {
   let action = "get_live_streams";
+  if (STATE.mode === "movies") {
+    action = "get_vod_streams";
+  } else if (STATE.mode === "series") {
+    action = "get_series";
+  }
   if (categoryId) action += `&category_id=${categoryId}`;
   return await apiCall(action);
 }
@@ -117,7 +135,10 @@ async function getStreams(categoryId) {
 function buildStreamUrl(streamId, ext = "m3u8") {
   // Force the stream to go directly to the IPTV provider server over HTTP
   const actualStreamServer = "http://mhav1.com:2095";
-  return `${actualStreamServer}/live/${encodeURIComponent(STATE.username)}/${encodeURIComponent(STATE.password)}/${streamId}.${ext}`;
+  let type = "live";
+  if (STATE.mode === "movies") type = "movie";
+  else if (STATE.mode === "series") type = "series";
+  return `${actualStreamServer}/${type}/${encodeURIComponent(STATE.username)}/${encodeURIComponent(STATE.password)}/${streamId}.${ext}`;
 }
 
 // ═══════ NAVIGATION ═══════
@@ -151,7 +172,7 @@ DOM.loginForm.addEventListener("submit", async (e) => {
   try {
     await authenticate();
     saveCredentials();
-    await loadMainScreen();
+    showScreen("selection-screen");
   } catch (err) {
     DOM.loginError.textContent = err.message || "Connection failed. Check your credentials.";
   } finally {
@@ -186,17 +207,29 @@ async function loadMainScreen() {
 // ═══════ CATEGORIES ═══════
 function renderCategories() {
   let html = "";
+  let catIcon = "bi-folder2";
+  let allLabel = "الكل";
+  
+  if (STATE.mode === "movies") {
+    catIcon = "bi-film";
+    allLabel = "كل الأفلام";
+  } else if (STATE.mode === "series") {
+    catIcon = "bi-collection-play";
+    allLabel = "كل المسلسلات";
+  } else {
+    allLabel = "كل القنوات";
+  }
 
-  // "All Channels" option
+  // "All" option
   html += `<button class="cat-item active" data-id="" tabindex="10">
     <i class="bi bi-collection-play"></i>
-    <span>All (${STATE.channels.length})</span>
+    <span>${allLabel} (${STATE.channels.length})</span>
   </button>`;
 
   STATE.categories.forEach((cat, i) => {
     const count = STATE.channels.filter(ch => ch.category_id === String(cat.category_id)).length;
     html += `<button class="cat-item" data-id="${escapeHtml(String(cat.category_id))}" tabindex="${11 + i}">
-      <i class="bi bi-folder2"></i>
+      <i class="bi ${catIcon}"></i>
       <span>${escapeHtml(cat.category_name)} (${count})</span>
     </button>`;
   });
@@ -218,13 +251,17 @@ function selectCategory(categoryId) {
   if (activeBtn) activeBtn.classList.add("active");
 
   // Filter channels
+  let allLabel = "كل القنوات";
+  if (STATE.mode === "movies") allLabel = "كل الأفلام";
+  else if (STATE.mode === "series") allLabel = "كل المسلسلات";
+
   if (!categoryId) {
     STATE.filteredChannels = STATE.channels;
-    DOM.categoryTitle.textContent = "All Channels";
+    DOM.categoryTitle.textContent = allLabel;
   } else {
     STATE.filteredChannels = STATE.channels.filter(ch => String(ch.category_id) === String(categoryId));
     const cat = STATE.categories.find(c => String(c.category_id) === String(categoryId));
-    DOM.categoryTitle.textContent = cat ? cat.category_name : "Channels";
+    DOM.categoryTitle.textContent = cat ? cat.category_name : allLabel;
   }
 
   renderChannels();
@@ -233,17 +270,22 @@ function selectCategory(categoryId) {
 // ═══════ CHANNELS ═══════
 function renderChannels() {
   const list = STATE.filteredChannels;
-  DOM.channelCount.textContent = `${list.length} channels`;
+  let countLabel = "قناة";
+  if (STATE.mode === "movies") countLabel = "فيلم";
+  else if (STATE.mode === "series") countLabel = "مسلسل";
+  
+  DOM.channelCount.textContent = `${list.length} ${countLabel}`;
 
   if (list.length === 0) {
-    DOM.channelList.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)"><i class="bi bi-inbox" style="font-size:32px;display:block;margin-bottom:8px"></i>No channels found</div>';
+    DOM.channelList.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)"><i class="bi bi-inbox" style="font-size:32px;display:block;margin-bottom:8px"></i>لا يوجد محتوى</div>';
     return;
   }
 
   let html = "";
   list.forEach((ch, i) => {
-    const logo = ch.stream_icon ? `<img class="ch-logo" src="${escapeHtml(ch.stream_icon)}" alt="" onerror="this.style.display='none'" loading="lazy">` : "";
-    html += `<button class="ch-item${STATE.activeChannel && STATE.activeChannel.stream_id === ch.stream_id ? " active" : ""}" data-index="${i}" tabindex="${200 + i}">
+    const logoUrl = ch.cover || ch.stream_icon;
+    const logo = logoUrl ? `<img class="ch-logo" src="${escapeHtml(logoUrl)}" alt="" onerror="this.style.display='none'" loading="lazy">` : "";
+    html += `<button class="ch-item${STATE.activeChannel && (STATE.activeChannel.stream_id === ch.stream_id || STATE.activeChannel.series_id === ch.series_id) ? " active" : ""}" data-index="${i}" tabindex="${200 + i}">
       <span class="ch-num">${ch.num || (i + 1)}</span>
       ${logo}
       <span class="ch-name">${escapeHtml(ch.name || "Unknown")}</span>
@@ -256,19 +298,26 @@ function renderChannels() {
   DOM.channelList.querySelectorAll(".ch-item").forEach(btn => {
     btn.addEventListener("click", () => {
       const idx = parseInt(btn.dataset.index);
-      playChannel(STATE.filteredChannels[idx]);
+      const item = STATE.filteredChannels[idx];
+      if (STATE.mode === "series") {
+        loadSeriesEpisodes(item);
+      } else {
+        playChannel(item);
+      }
     });
 
     // Double-click for fullscreen
     btn.addEventListener("dblclick", () => {
       const idx = parseInt(btn.dataset.index);
-      playChannel(STATE.filteredChannels[idx]);
-      enterFullscreen();
+      const item = STATE.filteredChannels[idx];
+      if (STATE.mode !== "series") {
+        playChannel(item);
+        enterFullscreen();
+      }
     });
   });
 }
 
-// ═══════ VIDEO PLAYBACK ═══════
 function playChannel(channel) {
   if (!channel) return;
 
@@ -288,8 +337,9 @@ function playChannel(channel) {
   DOM.playerLoading.style.display = "flex";
   DOM.playerError.style.display = "none";
 
-  // Build stream URL - try m3u8 first, fallback to ts
-  const streamUrl = buildStreamUrl(channel.stream_id, "m3u8");
+  // Build stream URL
+  const ext = STATE.mode === "movies" ? (channel.container_extension || "mp4") : "m3u8";
+  const streamUrl = buildStreamUrl(channel.stream_id, ext);
 
   loadStream(DOM.videoPlayer, streamUrl, "main");
 }
@@ -302,7 +352,10 @@ function loadStream(videoEl, url, instanceKey) {
     STATE[hlsKey] = null;
   }
 
-  if (Hls && Hls.isSupported()) {
+  // Only load with Hls.js if it is an m3u8 playlist
+  const isHlsUrl = url.includes(".m3u8") || url.includes("m3u8");
+
+  if (Hls && Hls.isSupported() && isHlsUrl) {
     const hls = new Hls({
       maxBufferLength: 10,
       maxMaxBufferLength: 30,
@@ -331,7 +384,7 @@ function loadStream(videoEl, url, instanceKey) {
         }
       }
     });
-  } else if (videoEl.canPlayType("application/vnd.apple.mpegurl")) {
+  } else if (videoEl.canPlayType("application/vnd.apple.mpegurl") && isHlsUrl) {
     // Native HLS support (Safari, some Smart TVs)
     videoEl.src = url;
     videoEl.addEventListener("loadedmetadata", () => {
@@ -348,11 +401,8 @@ function loadStream(videoEl, url, instanceKey) {
       }
     }, { once: true });
   } else {
-    // Fallback: try direct stream
-    if (STATE.activeChannel) {
-      const tsUrl = buildStreamUrl(STATE.activeChannel.stream_id, "ts");
-      loadDirectStream(videoEl, tsUrl);
-    }
+    // Fallback: try direct stream (MP4, MKV, TS)
+    loadDirectStream(videoEl, url);
   }
 }
 
@@ -438,26 +488,179 @@ document.addEventListener("keydown", (e) => {
 });
 
 // ═══════ LOGOUT ═══════
-DOM.btnLogout.addEventListener("click", () => {
+function logout() {
   // Cleanup
   if (STATE.hlsInstance) { STATE.hlsInstance.destroy(); STATE.hlsInstance = null; }
   if (STATE.fsHlsInstance) { STATE.fsHlsInstance.destroy(); STATE.fsHlsInstance = null; }
   DOM.videoPlayer.src = "";
   DOM.fsVideoPlayer.src = "";
   DOM.fullscreenPlayer.style.display = "none";
+  DOM.nowPlaying.innerHTML = '<span class="now-label">Ready</span>';
 
   STATE.channels = [];
   STATE.categories = [];
   STATE.filteredChannels = [];
   STATE.activeChannel = null;
   STATE.activeCategory = null;
+  STATE.selectedSeries = null;
+  STATE.selectedSeason = null;
+  STATE.activeEpisodes = null;
 
   try { localStorage.removeItem("prismgate_tv"); } catch (e) {}
 
   showScreen("login-screen");
   DOM.loginError.textContent = "";
-  DOM.nowPlaying.innerHTML = '<span class="now-label">Ready</span>';
+}
+
+DOM.btnLogout.addEventListener("click", logout);
+
+// ═══════ SELECTION SCREEN EVENTS ═══════
+DOM.btnSelectLive.addEventListener("click", () => {
+  STATE.mode = "live";
+  loadMainScreen();
 });
+
+DOM.btnSelectMovies.addEventListener("click", () => {
+  STATE.mode = "movies";
+  loadMainScreen();
+});
+
+DOM.btnSelectSeries.addEventListener("click", () => {
+  STATE.mode = "series";
+  loadMainScreen();
+});
+
+DOM.btnLogoutSelect.addEventListener("click", logout);
+
+DOM.btnHome.addEventListener("click", () => {
+  // Stop playing
+  if (STATE.hlsInstance) { STATE.hlsInstance.destroy(); STATE.hlsInstance = null; }
+  if (STATE.fsHlsInstance) { STATE.fsHlsInstance.destroy(); STATE.fsHlsInstance = null; }
+  DOM.videoPlayer.src = "";
+  DOM.fsVideoPlayer.src = "";
+  DOM.fullscreenPlayer.style.display = "none";
+  DOM.nowPlaying.innerHTML = '<span class="now-label">Ready</span>';
+  
+  STATE.activeChannel = null;
+  STATE.selectedSeries = null;
+  STATE.selectedSeason = null;
+  STATE.activeEpisodes = null;
+
+  showScreen("selection-screen");
+});
+
+// ═══════ SERIES SEASONS & EPISODES ═══════
+async function loadSeriesEpisodes(series) {
+  STATE.selectedSeries = series;
+  DOM.loadingOverlay.style.display = "flex";
+  try {
+    const info = await apiCall(`get_series_info&series_id=${series.series_id}`);
+    DOM.loadingOverlay.style.display = "none";
+    if (info && info.episodes) {
+      renderEpisodes(info.episodes);
+    } else {
+      alert("لا توجد حلقات متاحة لهذا المسلسل");
+    }
+  } catch (err) {
+    DOM.loadingOverlay.style.display = "none";
+    console.error("Failed to load series info:", err);
+    alert("فشل في تحميل حلقات المسلسل");
+  }
+}
+
+function renderEpisodes(episodesObj) {
+  const seasons = Object.keys(episodesObj).sort((a, b) => parseInt(a) - parseInt(b));
+  if (seasons.length === 0) {
+    DOM.channelList.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">لا توجد حلقات</div>';
+    return;
+  }
+
+  STATE.activeEpisodes = episodesObj;
+  STATE.selectedSeason = seasons[0];
+  
+  renderSeasonEpisodes();
+}
+
+function renderSeasonEpisodes() {
+  const season = STATE.selectedSeason;
+  const list = STATE.activeEpisodes[season] || [];
+  
+  let seasonsHtml = "";
+  const seasons = Object.keys(STATE.activeEpisodes).sort((a, b) => parseInt(a) - parseInt(b));
+  if (seasons.length > 1) {
+    seasonsHtml = `<select id="season-selector" class="season-select" style="background:rgba(255,255,255,0.06);color:#fff;border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-family:var(--font);font-size:12px;outline:none;">`;
+    seasons.forEach(s => {
+      seasonsHtml += `<option value="${s}" ${s === season ? "selected" : ""}>الموسم ${s}</option>`;
+    });
+    seasonsHtml += `</select>`;
+  } else {
+    seasonsHtml = `<span class="channel-count">الموسم ${season}</span>`;
+  }
+
+  DOM.categoryTitle.innerHTML = `<button class="btn-back-series" id="btn-back-series"><i class="bi bi-arrow-right"></i> ${escapeHtml(STATE.selectedSeries.name)}</button>`;
+  DOM.channelCount.innerHTML = seasonsHtml;
+
+  document.getElementById("btn-back-series").addEventListener("click", () => {
+    STATE.selectedSeries = null;
+    STATE.selectedSeason = null;
+    STATE.activeEpisodes = null;
+    selectCategory(STATE.activeCategory);
+  });
+
+  const selector = document.getElementById("season-selector");
+  if (selector) {
+    selector.addEventListener("change", (e) => {
+      STATE.selectedSeason = e.target.value;
+      renderSeasonEpisodes();
+    });
+  }
+
+  if (list.length === 0) {
+    DOM.channelList.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">لا توجد حلقات في هذا الموسم</div>';
+    return;
+  }
+
+  let html = "";
+  list.forEach((ep, i) => {
+    const logoUrl = ep.info && ep.info.movie_image ? ep.info.movie_image : "";
+    const logo = logoUrl ? `<img class="ch-logo" src="${escapeHtml(logoUrl)}" alt="" onerror="this.style.display='none'" loading="lazy">` : "";
+    html += `<button class="ch-item" data-index="${i}" id="ep-item-${i}">
+      <span class="ch-num">${ep.episode_num || (i + 1)}</span>
+      ${logo}
+      <span class="ch-name">${escapeHtml(ep.title || `الحلقة ${i+1}`)}</span>
+    </button>`;
+  });
+
+  DOM.channelList.innerHTML = html;
+
+  DOM.channelList.querySelectorAll(".ch-item").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.dataset.index);
+      playEpisode(list[idx]);
+    });
+  });
+}
+
+function playEpisode(episode) {
+  if (!episode) return;
+  STATE.activeChannel = episode;
+
+  DOM.channelList.querySelectorAll(".ch-item").forEach(b => b.classList.remove("active"));
+  const episodeIndex = STATE.activeEpisodes[STATE.selectedSeason].indexOf(episode);
+  const activeBtn = document.getElementById(`ep-item-${episodeIndex}`);
+  if (activeBtn) activeBtn.classList.add("active");
+
+  DOM.nowPlaying.innerHTML = `<span class="now-label playing"><i class="bi bi-broadcast"></i> ${escapeHtml(STATE.selectedSeries.name)} - ${escapeHtml(episode.title)}</span>`;
+
+  DOM.playerOverlay.style.display = "none";
+  DOM.playerLoading.style.display = "flex";
+  DOM.playerError.style.display = "none";
+
+  const ext = episode.container_extension || "mp4";
+  const streamUrl = buildStreamUrl(episode.id, ext);
+
+  loadStream(DOM.videoPlayer, streamUrl, "main");
+}
 
 // ═══════ AUTO-LOGIN ═══════
 (async function init() {
@@ -472,10 +675,9 @@ DOM.btnLogout.addEventListener("click", () => {
 
     try {
       await authenticate();
-      await loadMainScreen();
+      showScreen("selection-screen");
       return;
     } catch (e) {
-      // Auto-login failed, show login screen
       console.log("Auto-login failed:", e);
     }
   }
