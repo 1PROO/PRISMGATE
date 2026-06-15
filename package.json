@@ -1,0 +1,13 @@
+{
+  "name": "prismgate",
+  "version": "1.0.0",
+  "description": "IPTV Proxy on Cloudflare Workers",
+  "main": "index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.60.0"
+  }
+}

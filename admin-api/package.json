@@ -1,0 +1,13 @@
+{
+  "name": "prismgate-admin-api",
+  "version": "1.0.0",
+  "description": "Admin API for PrismGate IPTV KV Management",
+  "main": "index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.60.0"
+  }
+}

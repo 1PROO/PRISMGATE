@@ -1,0 +1,546 @@
+/* 
+ * Glassmorphism Design System for PrismGate Admin
+ * Custom Styles & Utilities
+ */
+
+:root {
+  --font-family: 'Outfit', sans-serif;
+  --bg-gradient: radial-gradient(circle at 0% 0%, #1a1528 0%, #0d0b14 100%);
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-focus: rgba(130, 75, 226, 0.45);
+  --primary-glow-color: #9254de;
+  --primary-glow-hover: #b37feb;
+  --success-glow: #52c41a;
+  --danger-glow: #ff4d4f;
+  --warning-glow: #faad14;
+}
+
+body {
+  font-family: var(--font-family);
+  background: var(--bg-gradient);
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  position: relative;
+  /* Safe area for notched phones */
+  padding:
+    env(safe-area-inset-top)
+    env(safe-area-inset-right)
+    env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+/* Background Glowing Blobs */
+.glow-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.35;
+  mix-blend-mode: screen;
+  animation: float-blob 20s infinite alternate ease-in-out;
+}
+
+.blob-1 {
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, #5b1a8d 0%, rgba(91, 26, 141, 0) 70%);
+  top: -10%;
+  left: 10%;
+}
+
+.blob-2 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, #10239e 0%, rgba(16, 35, 158, 0) 70%);
+  bottom: -10%;
+  right: 15%;
+  animation-delay: -5s;
+}
+
+.blob-3 {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, #c41d7f 0%, rgba(196, 29, 127, 0) 70%);
+  top: 40%;
+  right: -5%;
+  animation-delay: -10s;
+}
+
+@keyframes float-blob {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(40px, -60px) scale(1.1);
+  }
+  100% {
+    transform: translate(-30px, 40px) scale(0.95);
+  }
+}
+
+/* Glassmorphism Cards */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 12px 40px 0 rgba(146, 84, 222, 0.1);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 480px;
+  margin: 20px;
+}
+
+/* Typography & Layout spacing */
+.tracking-wide {
+  letter-spacing: 0.08em;
+}
+
+.uppercase-tracking {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+}
+
+/* Glass Buttons */
+.btn-primary-glow {
+  background: linear-gradient(135deg, var(--primary-glow-color) 0%, #722ed1 100%);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px rgba(146, 84, 222, 0.3);
+  border-radius: 10px;
+  transition: all 0.25s ease;
+}
+
+.btn-primary-glow:hover {
+  background: linear-gradient(135deg, var(--primary-glow-hover) 0%, var(--primary-glow-color) 100%);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(146, 84, 222, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-secondary-glow {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  transition: all 0.25s ease;
+}
+
+.btn-secondary-glow:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-danger-glow {
+  background: rgba(255, 77, 79, 0.15);
+  color: #ff7875;
+  border: 1px solid rgba(255, 77, 79, 0.25);
+  border-radius: 10px;
+  transition: all 0.25s ease;
+}
+
+.btn-danger-glow:hover {
+  background: var(--danger-glow);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(255, 77, 79, 0.4);
+  transform: translateY(-1px);
+}
+
+.bg-danger-glow {
+  background: rgba(255, 77, 79, 0.15) !important;
+}
+
+/* Inputs & Forms */
+.glass-input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  color: #fff !important;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  transition: all 0.25s ease;
+}
+
+.glass-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.glass-input:focus {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--glass-border-focus);
+  box-shadow: 0 0 0 0.25rem rgba(130, 75, 226, 0.25);
+  outline: none;
+}
+
+.glass-addon {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+}
+
+/* Stats wrapper */
+.stat-icon-wrapper {
+  width: 54px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+.bg-blue-glow {
+  background: rgba(16, 35, 158, 0.3);
+  color: #85a5ff;
+  border: 1px solid rgba(16, 35, 158, 0.4);
+}
+
+.bg-green-glow {
+  background: rgba(82, 196, 26, 0.2);
+  color: #95de64;
+  border: 1px solid rgba(82, 196, 26, 0.3);
+}
+
+.bg-red-glow {
+  background: rgba(255, 77, 79, 0.2);
+  color: #ff9c9c;
+  border: 1px solid rgba(255, 77, 79, 0.3);
+}
+
+.text-primary-glow {
+  color: #b37feb;
+  text-shadow: 0 0 10px rgba(179, 127, 235, 0.6);
+}
+
+.bg-glow {
+  box-shadow: 0 0 10px currentColor;
+}
+
+.bg-glass {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.border-white-10 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ============================================================
+   FIX #1 — TABLE COLOR CONTRAST
+   Force dark theme on ALL table elements to override Bootstrap's
+   white defaults. Bootstrap injects --bs-table-* CSS variables
+   and white backgrounds on .table, thead, tbody, tr, td, th.
+   We nuke every one of them with !important.
+   ============================================================ */
+.table-custom,
+.table-custom thead,
+.table-custom tbody,
+.table-custom tr,
+.table-custom th,
+.table-custom td {
+  background-color: transparent !important;
+  color: #fff !important;
+  --bs-table-bg: transparent !important;
+  --bs-table-color: #fff !important;
+  --bs-table-striped-bg: transparent !important;
+  --bs-table-hover-bg: rgba(255, 255, 255, 0.05) !important;
+  --bs-table-border-color: transparent !important;
+  border-color: transparent !important;
+}
+
+.table-custom {
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+
+.table-custom thead th {
+  border-bottom: none !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  padding: 12px 16px;
+}
+
+.table-custom tbody tr {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.table-custom tbody tr:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  transform: translateY(-1px);
+}
+
+.table-custom tbody td {
+  border: none !important;
+  padding: 16px;
+  color: #fff !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.03) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important;
+}
+
+.table-custom tbody tr td:first-child {
+  border-left: 1px solid rgba(255, 255, 255, 0.03) !important;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.table-custom tbody tr td:last-child {
+  border-right: 1px solid rgba(255, 255, 255, 0.03) !important;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+/* Modals */
+.glass-modal {
+  background: rgba(25, 21, 38, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  box-shadow: 0 15px 50px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* Badges */
+.badge-status {
+  padding: 0.4em 0.8em;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.badge-active {
+  background: rgba(82, 196, 26, 0.15);
+  color: #73d13d;
+  border: 1px solid rgba(82, 196, 26, 0.25);
+}
+
+.badge-inactive {
+  background: rgba(255, 77, 79, 0.15);
+  color: #ff7875;
+  border: 1px solid rgba(255, 77, 79, 0.25);
+}
+
+.badge-expired {
+  background: rgba(250, 173, 20, 0.15);
+  color: #ffc069;
+  border: 1px solid rgba(250, 173, 20, 0.25);
+}
+
+/* Glass Toast */
+.glass-toast {
+  background: rgba(25, 21, 38, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+}
+
+/* Miscellaneous */
+.fs-7 {
+  font-size: 0.75rem;
+}
+.btn-close-white {
+  filter: invert(1) grayscale(1) brightness(2);
+}
+select.glass-input option {
+  background: #181525;
+  color: #fff;
+}
+
+/* Table responsive wrapper — allows horizontal scroll on small viewports */
+.table-responsive-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ============================================================
+   FIX #2 — MOBILE RESPONSIVENESS
+   ============================================================ */
+
+/* ---- Tablets & small laptops (< 992px) ---- */
+@media (max-width: 991.98px) {
+  .blob-1 { width: 350px; height: 350px; }
+  .blob-2 { width: 380px; height: 380px; }
+  .blob-3 { width: 260px; height: 260px; }
+}
+
+/* ---- Mobile (< 768px) ---- */
+@media (max-width: 767.98px) {
+  /* Shrink blobs so they don't dominate small screens */
+  .blob-1 { width: 220px; height: 220px; }
+  .blob-2 { width: 250px; height: 250px; }
+  .blob-3 { width: 180px; height: 180px; }
+
+  /* Reduce heading sizes */
+  h1, .h1 { font-size: 1.5rem; }
+  h2, .h2 { font-size: 1.25rem; }
+  h3, .h3 { font-size: 1.1rem; }
+
+  /* Glass cards — less padding on mobile */
+  .glass-card {
+    border-radius: 14px;
+    padding: 1rem !important;
+  }
+
+  /* Stat cards — stack vertically, single column */
+  .stat-icon-wrapper {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  /* Auth card — full width on mobile */
+  .auth-card {
+    max-width: 100%;
+    margin: 12px;
+  }
+
+  /* Touch-friendly buttons — minimum 44px tap target (WCAG) */
+  .btn-primary-glow,
+  .btn-secondary-glow,
+  .btn-danger-glow {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.625rem 1.125rem;
+    font-size: 0.9rem;
+  }
+
+  /* Glass inputs — touch-friendly height */
+  .glass-input {
+    min-height: 44px;
+    font-size: 1rem; /* prevent iOS zoom on focus for inputs < 16px */
+  }
+
+  /* Table — make horizontally scrollable */
+  .table-responsive-wrapper {
+    margin: 0 -0.5rem;
+  }
+
+  .table-custom {
+    min-width: 600px; /* force scroll when viewport is smaller */
+  }
+
+  .table-custom thead th {
+    font-size: 0.65rem;
+    padding: 10px 12px;
+    white-space: nowrap;
+  }
+
+  .table-custom tbody td {
+    padding: 12px;
+    font-size: 0.85rem;
+  }
+
+  /* Modal — near full-width on mobile */
+  .glass-modal {
+    border-radius: 16px;
+    margin: 0.5rem;
+  }
+
+  /* Badges — slightly smaller */
+  .badge-status {
+    font-size: 0.65rem;
+    padding: 0.3em 0.6em;
+  }
+}
+
+/* ---- Very small phones (< 480px) ---- */
+@media (max-width: 479.98px) {
+  .blob-1 { width: 150px; height: 150px; }
+  .blob-2 { width: 170px; height: 170px; }
+  .blob-3 { width: 120px; height: 120px; }
+
+  h1, .h1 { font-size: 1.25rem; }
+  h2, .h2 { font-size: 1.1rem; }
+
+  .glass-card {
+    border-radius: 12px;
+    padding: 0.75rem !important;
+  }
+
+  .auth-card {
+    margin: 8px;
+  }
+
+  /* Hide non-essential table columns to save space
+     Apply .d-mobile-none in HTML or use nth-child to auto-hide */
+  .table-custom .mobile-hide {
+    display: none !important;
+  }
+
+  .table-custom tbody td {
+    padding: 10px 8px;
+    font-size: 0.8rem;
+  }
+
+  .table-custom thead th {
+    padding: 8px;
+    font-size: 0.6rem;
+  }
+
+  /* Stat icon even smaller */
+  .stat-icon-wrapper {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+  }
+
+  .stat-icon-wrapper i {
+    font-size: 1rem;
+  }
+}
+
+/* ---- Safe-area insets for notched phones (iPhone X+, etc.) ---- */
+@supports (padding: env(safe-area-inset-top)) {
+  .container,
+  .container-fluid {
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+  }
+
+  /* Fixed-bottom elements must clear the bottom notch */
+  .glass-toast,
+  .fixed-bottom,
+  [class*="fixed-bottom"] {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* ---- Reduced-motion preference (a11y) ---- */
+@media (prefers-reduced-motion: reduce) {
+  .blob {
+    animation: none;
+  }
+  .glass-card,
+  .table-custom tbody tr,
+  .btn-primary-glow,
+  .btn-secondary-glow,
+  .btn-danger-glow {
+    transition: none;
+  }
+}

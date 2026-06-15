@@ -1,0 +1,11 @@
+name = "prismgate-admin-api"
+main = "index.js"
+compatibility_date = "2024-04-03"
+
+[vars]
+# Change this to a secure, random string for your deployment
+ADMIN_SECRET_KEY = "Admin@12345"
+
+[[kv_namespaces]]
+binding = "IPTV_KV"
+id = "4a46e79d0e6a43d987af4afc81ab27fa"

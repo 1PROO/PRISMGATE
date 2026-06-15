@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PrismGate | Admin Dashboard</title>
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#9254de">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PrismGate Admin">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Google Fonts: Outfit -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Custom Glassmorphism Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Background Glowing Blobs -->
+  <div class="glow-bg">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <!-- Auth Screen (overlay) -->
+  <div id="auth-screen" class="d-flex align-items-center justify-content-center min-vh-100">
+    <div class="glass-card auth-card p-5 text-center text-white">
+      <div class="brand-logo mb-4">
+        <i class="bi bi-shield-lock-fill fs-1 text-primary-glow"></i>
+      </div>
+      <h2 class="fw-bold mb-2">PrismGate Admin</h2>
+      <p class="text-white-50 mb-4">Enter your secret key to access the control panel</p>
+      
+      <form id="login-form">
+        <div class="mb-4">
+          <input type="password" id="secret-key-input" class="form-control glass-input text-center" placeholder="Admin Secret Key" required>
+        </div>
+        <button type="submit" class="btn btn-primary-glow w-100 py-2.5 fw-semibold">
+          Unlock Dashboard <i class="bi bi-arrow-right-short ms-1"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dashboard Container -->
+  <div id="dashboard" class="container py-5 d-none">
+    
+    <!-- Top Navigation Bar -->
+    <header class="glass-card p-3 mb-5 d-flex align-items-center justify-content-between text-white flex-wrap gap-3">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-gate-fill fs-3 text-primary-glow"></i>
+        <h3 class="m-0 fw-bold tracking-wide">PRISM<span class="text-primary-glow">GATE</span></h3>
+        <span class="badge bg-glass ms-2 border border-white-10">Admin Portal</span>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <span class="d-none d-md-inline text-white-50">API status: <span class="badge bg-success bg-glow px-2.5">Connected</span></span>
+        <button id="install-pwa-btn" class="btn btn-primary-glow btn-sm fw-semibold d-none">
+          <i class="bi bi-download me-1"></i> Install App
+        </button>
+        <button id="logout-btn" class="btn btn-danger-glow btn-sm fw-semibold">
+          <i class="bi bi-power me-1"></i> Logout
+        </button>
+      </div>
+    </header>
+
+    <!-- IPTV Player Server Host Information Banner -->
+    <div class="glass-card p-3 mb-4 text-white d-flex align-items-center justify-content-between flex-wrap gap-3">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <i class="bi bi-info-circle-fill text-primary-glow fs-4"></i>
+        <div>
+          <span class="fw-semibold text-white-85">IPTV Server Host:</span>
+          <code class="text-primary-glow ms-2 bg-glass px-2 py-1 rounded fs-6" style="cursor: pointer;" onclick="copyToClipboard('gate.codro.me')" title="Click to copy">gate.codro.me</code>
+          <span class="text-white-50 mx-2">| Backup:</span>
+          <code class="text-white-50 bg-glass px-2 py-1 rounded" style="cursor: pointer;" onclick="copyToClipboard('prismgate.ahmedakram19.workers.dev')" title="Click to copy">prismgate.ahmedakram19.workers.dev</code>
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-secondary-glow btn-sm fw-semibold" onclick="copyToClipboard('gate.codro.me')">
+          <i class="bi bi-copy me-1"></i> Copy Primary Host
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats Summary Widgets -->
+    <div class="row g-4 mb-5 text-white">
+      <div class="col-md-4">
+        <div class="glass-card p-4 d-flex align-items-center justify-content-between">
+          <div>
+            <p class="text-white-50 mb-1 fw-medium uppercase-tracking">Total Users</p>
+            <h2 id="stat-total-users" class="fw-bold mb-0">0</h2>
+          </div>
+          <div class="stat-icon-wrapper bg-blue-glow">
+            <i class="bi bi-people-fill fs-3"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="glass-card p-4 d-flex align-items-center justify-content-between">
+          <div>
+            <p class="text-white-50 mb-1 fw-medium uppercase-tracking">Active Users</p>
+            <h2 id="stat-active-users" class="fw-bold mb-0">0</h2>
+          </div>
+          <div class="stat-icon-wrapper bg-green-glow">
+            <i class="bi bi-check-circle-fill fs-3"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="glass-card p-4 d-flex align-items-between justify-content-between">
+          <div>
+            <p class="text-white-50 mb-1 fw-medium uppercase-tracking">Servers Linked</p>
+            <h2 id="stat-servers" class="fw-bold mb-0">0</h2>
+          </div>
+          <div class="stat-icon-wrapper bg-red-glow">
+            <i class="bi bi-exclamation-triangle-fill fs-3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Client List Panel -->
+    <main class="glass-card p-4 mb-5 text-white">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+        <div>
+          <h4 class="fw-bold m-0">Client Directory</h4>
+          <p class="text-white-50 mb-0">Manage client accounts and origin server bindings</p>
+        </div>
+        <div>
+          <button class="btn btn-primary-glow fw-semibold" data-bs-toggle="modal" data-bs-target="#userModal" id="add-user-btn-trigger">
+            <i class="bi bi-plus-lg me-1"></i> Add Client Account
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters & Search Bar -->
+      <div class="row g-3 mb-4 align-items-center">
+        <div class="col-md-9">
+          <div class="input-group">
+            <span class="input-group-text glass-addon text-white-50"><i class="bi bi-search"></i></span>
+            <input type="text" id="search-input" class="form-control glass-input" placeholder="Search client by username...">
+          </div>
+        </div>
+        <div class="col-md-3">
+          <button id="refresh-btn" class="btn btn-secondary-glow w-100 fw-semibold">
+            <i class="bi bi-arrow-clockwise me-1"></i> Refresh Table
+          </button>
+        </div>
+      </div>
+
+      <!-- Clients Table -->
+      <div class="table-responsive">
+        <table class="table table-custom align-middle text-white mb-0">
+          <thead>
+            <tr>
+              <th>Client Username</th>
+              <th>Client Password</th>
+              <th>Origin Server</th>
+              <th>Status</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="user-table-body">
+            <tr>
+              <td colspan="5" class="text-center py-5">
+                <div class="spinner-border text-primary-glow" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-white-50 mt-2 m-0">Fetching client records...</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- User Modal (Add/Edit) -->
+  <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content glass-modal text-white">
+        <div class="modal-header border-white-10">
+          <h5 class="modal-title fw-bold" id="userModalLabel">Add Client Account</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div id="modal-error-alert" class="alert alert-danger d-none border-0 bg-danger-glow text-white" role="alert"></div>
+          
+          <form id="user-form">
+            <input type="hidden" id="form-action" value="add">
+            
+            <div class="mb-3">
+              <label for="form-username" class="form-label text-white-50">Username</label>
+              <input type="text" class="form-control glass-input" id="form-username" placeholder="e.g. john_doe" required>
+              <div class="form-text text-white-50" id="username-help-text">Choose a unique client login name.</div>
+            </div>
+
+            <div class="mb-3">
+              <label for="form-password" class="form-label text-white-50">Password</label>
+              <div class="input-group">
+                <input type="text" class="form-control glass-input" id="form-password" placeholder="Secure Password" required>
+                <button type="button" class="btn btn-outline-light border-white-10 bg-glass" id="gen-password-btn" title="Generate Random Password">
+                  <i class="bi bi-shuffle"></i>
+                </button>
+              </div>
+            </div>
+
+            <p class="text-white-50 mt-3 mb-2 fw-semibold"><i class="bi bi-server me-1"></i> Origin Server Details</p><hr class="border-white-10 mt-0">
+
+            <div class="mb-3">
+              <label for="form-origin-host" class="form-label text-white-50">Origin Host</label>
+              <input type="text" class="form-control glass-input" id="form-origin-host" placeholder="e.g. mhav1.com:2095" required>
+            </div>
+
+            <div class="mb-3">
+              <label for="form-origin-username" class="form-label text-white-50">Origin Username</label>
+              <input type="text" class="form-control glass-input" id="form-origin-username" placeholder="e.g. 315617399" required>
+            </div>
+
+            <div class="mb-4">
+              <label for="form-origin-password" class="form-label text-white-50">Origin Password</label>
+              <input type="text" class="form-control glass-input" id="form-origin-password" placeholder="e.g. 89487285635" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary-glow w-100 py-2.5 fw-semibold" id="form-submit-btn">
+              Create Account
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- iOS Install Modal -->
+  <div class="modal fade" id="iosInstallModal" tabindex="-1" aria-labelledby="iosInstallModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content glass-modal text-white">
+        <div class="modal-header border-white-10">
+          <h5 class="modal-title fw-bold" id="iosInstallModalLabel"><i class="bi bi-apple me-1"></i> Install on iOS</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4 text-center">
+          <p class="mb-4 text-white-50">Follow these simple steps to install the app on your iPhone or iPad:</p>
+          
+          <div class="d-flex align-items-center gap-3 mb-4 text-start bg-glass p-3 rounded">
+            <div class="fs-2 text-primary-glow"><i class="bi bi-box-arrow-up"></i></div>
+            <div>
+              <h6 class="fw-bold mb-1">1. Tap the Share Icon</h6>
+              <p class="text-white-50 mb-0 small">Tap the share button in Safari at the bottom of the screen.</p>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-3 mb-4 text-start bg-glass p-3 rounded">
+            <div class="fs-2 text-primary-glow"><i class="bi bi-plus-square"></i></div>
+            <div>
+              <h6 class="fw-bold mb-1">2. Add to Home Screen</h6>
+              <p class="text-white-50 mb-0 small">Scroll down and tap "Add to Home Screen".</p>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-3 text-start bg-glass p-3 rounded">
+            <div class="fs-2 text-primary-glow"><i class="bi bi-check-circle-fill"></i></div>
+            <div>
+              <h6 class="fw-bold mb-1">3. Confirm Installation</h6>
+              <p class="text-white-50 mb-0 small">Tap "Add" in the top-right corner to complete.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="liveToast" class="toast glass-toast text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body d-flex align-items-center gap-2">
+          <i id="toast-icon" class="bi bi-info-circle-fill text-primary-glow"></i>
+          <span id="toast-message">Message text goes here.</span>
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('SW registered:', reg.scope))
+        .catch(err => console.warn('SW registration failed:', err));
+    }
+  </script>
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Main Application Script -->
+  <script src="app.js"></script>
+</body>
+</html>
