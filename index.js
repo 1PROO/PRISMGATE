@@ -21,7 +21,61 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    // 1. Handle CORS Preflight (OPTIONS) requests
+    // 1. Handle serving the player files from Pages proxy
+    if (url.pathname === "/player") {
+      return Response.redirect(`${url.protocol}//${url.host}/player/`, 301);
+    }
+
+    if (url.pathname === "/player/") {
+      const target = new URL("/index.html", "https://prismgate-player.pages.dev");
+      const pageRes = await fetch(target.toString());
+      return new Response(pageRes.body, {
+        status: pageRes.status,
+        statusText: pageRes.statusText,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          ...CORS_HEADERS
+        }
+      });
+    }
+
+    if (url.pathname.startsWith("/player/")) {
+      const relativePath = url.pathname.replace("/player/", "");
+      const target = new URL(relativePath || "index.html", "https://prismgate-player.pages.dev");
+      const pageRes = await fetch(target.toString());
+
+      let contentType = "text/plain";
+      if (target.pathname.endsWith(".js")) {
+        contentType = "application/javascript; charset=utf-8";
+      } else if (target.pathname.endsWith(".css")) {
+        contentType = "text/css; charset=utf-8";
+      } else if (target.pathname.endsWith(".html")) {
+        contentType = "text/html; charset=utf-8";
+      } else if (target.pathname.endsWith(".png")) {
+        contentType = "image/png";
+      } else if (target.pathname.endsWith(".json")) {
+        contentType = "application/json";
+      }
+
+      return new Response(pageRes.body, {
+        status: pageRes.status,
+        statusText: pageRes.statusText,
+        headers: {
+          "Content-Type": contentType,
+          ...CORS_HEADERS
+        }
+      });
+    }
+
+    // 2. Redirect / to /player/ if no username/password is present
+    if (url.pathname === "/") {
+      const hasUser = url.searchParams.has("username") || url.searchParams.has("user") || url.searchParams.has("password") || url.searchParams.has("pass");
+      if (!hasUser) {
+        return Response.redirect(`${url.protocol}//${url.host}/player/`, 302);
+      }
+    }
+
+    // 3. Handle CORS Preflight (OPTIONS) requests
     if (request.method === "OPTIONS") {
       return new Response(null, {
         status: 204,

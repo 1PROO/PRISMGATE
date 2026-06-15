@@ -26,7 +26,6 @@ const DOM = {
   loginScreen: $("login-screen"),
   mainScreen: $("main-screen"),
   loginForm: $("login-form"),
-  serverUrl: $("server-url"),
   username: $("username"),
   password: $("password"),
   loginError: $("login-error"),
@@ -71,7 +70,6 @@ updateClock();
 function saveCredentials() {
   try {
     localStorage.setItem("prismgate_tv", JSON.stringify({
-      server: STATE.server,
       username: STATE.username,
       password: STATE.password,
     }));
@@ -81,7 +79,7 @@ function saveCredentials() {
 function loadCredentials() {
   try {
     const data = JSON.parse(localStorage.getItem("prismgate_tv"));
-    if (data && data.server && data.username && data.password) {
+    if (data && data.username && data.password) {
       return data;
     }
   } catch (e) { /* ignore */ }
@@ -117,7 +115,9 @@ async function getStreams(categoryId) {
 }
 
 function buildStreamUrl(streamId, ext = "m3u8") {
-  return `${STATE.server}/live/${encodeURIComponent(STATE.username)}/${encodeURIComponent(STATE.password)}/${streamId}.${ext}`;
+  // Force the stream to go directly to the IPTV provider server over HTTP
+  const actualStreamServer = "http://mhav1.com:2095";
+  return `${actualStreamServer}/live/${encodeURIComponent(STATE.username)}/${encodeURIComponent(STATE.password)}/${streamId}.${ext}`;
 }
 
 // ═══════ NAVIGATION ═══════
@@ -131,20 +131,15 @@ DOM.loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   DOM.loginError.textContent = "";
 
-  let server = DOM.serverUrl.value.trim();
   const user = DOM.username.value.trim();
   const pass = DOM.password.value.trim();
 
-  if (!server || !user || !pass) {
+  if (!user || !pass) {
     DOM.loginError.textContent = "Please fill in all fields";
     return;
   }
 
-  // Clean up server URL
-  server = server.replace(/\/+$/, "");
-  if (!server.startsWith("http")) server = "http://" + server;
-
-  STATE.server = server;
+  STATE.server = window.location.origin;
   STATE.username = user;
   STATE.password = pass;
 
@@ -468,11 +463,10 @@ DOM.btnLogout.addEventListener("click", () => {
 (async function init() {
   const saved = loadCredentials();
   if (saved) {
-    DOM.serverUrl.value = saved.server;
     DOM.username.value = saved.username;
     DOM.password.value = saved.password;
 
-    STATE.server = saved.server;
+    STATE.server = window.location.origin;
     STATE.username = saved.username;
     STATE.password = saved.password;
 
