@@ -76,7 +76,16 @@ export default {
       });
     }
 
-    const storedValue = await env.IPTV_KV.get(`user:${clientUsername}`);
+    // Case-insensitive lookup check
+    const lookupKey = `user:${clientUsername.trim()}`;
+    let storedValue = await env.IPTV_KV.get(lookupKey);
+    
+    // Fallback: If not found, try lowercase lookup
+    if (!storedValue) {
+      const lowerKey = `user:${clientUsername.trim().toLowerCase()}`;
+      storedValue = await env.IPTV_KV.get(lowerKey);
+    }
+
     if (!storedValue) {
       return new Response("Unauthorized: Invalid username or password.", {
         status: 401,
