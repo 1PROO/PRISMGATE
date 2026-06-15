@@ -32,17 +32,52 @@ export default {
     // 2. Extract username and password from the request
     let clientUsername = "";
     let clientPassword = "";
-    let credentialSource = ""; // Track where credentials were found: "query" or "path"
+    let credentialSource = ""; // Track where credentials were found: "query", "path", "post-form", or "post-json"
+    let requestBodyText = ""; // Store POST body for later forwarding and rewriting
 
-    // A. Check URL Query Parameters (common in standard Xtream / M3U URLs)
-    clientUsername = url.searchParams.get("username") || url.searchParams.get("user");
-    clientPassword = url.searchParams.get("password") || url.searchParams.get("pass");
+    console.log(`[PRISMGATE] Request: ${request.method} ${url.pathname}`);
+    console.log(`[PRISMGATE] Headers: ${JSON.stringify(Object.fromEntries(request.headers.entries()))}`);
 
-    if (clientUsername && clientPassword) {
-      credentialSource = "query";
+    // A. If POST, check request body first (IPTV Smarters on Tizen TV often uses POST)
+    if (request.method === "POST") {
+      try {
+        const clonedRequest = request.clone();
+        requestBodyText = await clonedRequest.text();
+        console.log(`[PRISMGATE] Request Body: ${requestBodyText}`);
+
+        const contentType = request.headers.get("Content-Type") || "";
+        if (contentType.includes("application/json")) {
+          const bodyJson = JSON.parse(requestBodyText);
+          clientUsername = bodyJson.username || bodyJson.user;
+          clientPassword = bodyJson.password || bodyJson.pass;
+          if (clientUsername && clientPassword) {
+            credentialSource = "post-json";
+          }
+        } else {
+          // Default to url-encoded parameters
+          const bodyParams = new URLSearchParams(requestBodyText);
+          clientUsername = bodyParams.get("username") || bodyParams.get("user");
+          clientPassword = bodyParams.get("password") || bodyParams.get("pass");
+          if (clientUsername && clientPassword) {
+            credentialSource = "post-form";
+          }
+        }
+      } catch (err) {
+        console.error("[PRISMGATE] Error parsing POST body:", err);
+      }
     }
 
-    // B. Check URL Path Parameters (common in direct Xtream Codes stream paths, e.g. /live/username/password/stream_id.ts)
+    // B. Check URL Query Parameters if not found in POST body (common in standard Xtream / M3U URLs)
+    if (!clientUsername || !clientPassword) {
+      clientUsername = url.searchParams.get("username") || url.searchParams.get("user");
+      clientPassword = url.searchParams.get("password") || url.searchParams.get("pass");
+
+      if (clientUsername && clientPassword) {
+        credentialSource = "query";
+      }
+    }
+
+    // C. Check URL Path Parameters (common in direct Xtream Codes stream paths, e.g. /live/username/password/stream_id.ts)
     if (!clientUsername || !clientPassword) {
       const pathParts = url.pathname.split("/").filter(Boolean);
       // Expected structure: [category, username, password, stream_id_or_file]
@@ -189,6 +224,22 @@ export default {
     // Replace the Host header with the target origin host (Crucial to bypass origin reverse proxy rejection)
     forwardHeaders.set("Host", originUrl.host);
     
+    // Clean up Origin and Referer headers to prevent origin IPTV server CSRF/origin blocks on Smart TVs (Tizen, webOS)
+    forwardHeaders.delete("origin");
+    forwardHeaders.delete("referer");
+
+    // Ensure a valid standard IPTV Player User-Agent is set to prevent 403 blocks on TVs or script requests
+    const userAgent = request.headers.get("User-Agent") || "";
+    if (!userAgent || 
+        userAgent.toLowerCase().includes("curl") || 
+        userAgent.toLowerCase().includes("cloudflare") ||
+        userAgent.toLowerCase().includes("tizen") ||
+        userAgent.toLowerCase().includes("webos") ||
+        userAgent.toLowerCase().includes("smarttv") ||
+        userAgent.toLowerCase().includes("smart-tv")) {
+      forwardHeaders.set("User-Agent", "IPTVSmarters/1.0.3 (iPad; iOS 16.1; Scale/2.00)");
+    }
+    
     // Remove connection headers that Cloudflare manages
     forwardHeaders.delete("connection");
     forwardHeaders.delete("keep-alive");
@@ -206,18 +257,83 @@ export default {
 
     // Forward the request body if present (e.g. on POST requests)
     if (request.method !== "GET" && request.method !== "HEAD" && request.method !== "OPTIONS") {
-      forwardOptions.body = request.body;
+      if (credentialSource === "post-form" && requestBodyText) {
+        const bodyParams = new URLSearchParams(requestBodyText);
+        
+        // Replace username param (support both "username" and "user" keys)
+        if (bodyParams.has("username")) {
+          bodyParams.set("username", originUsername);
+        } else if (bodyParams.has("user")) {
+          bodyParams.set("user", originUsername);
+        }
+
+        // Replace password param (support both "password" and "pass" keys)
+        if (bodyParams.has("password")) {
+          bodyParams.set("password", originPassword);
+        } else if (bodyParams.has("pass")) {
+          bodyParams.set("pass", originPassword);
+        }
+
+        forwardOptions.body = bodyParams.toString();
+        forwardHeaders.set("Content-Type", "application/x-www-form-urlencoded");
+        const encodedBody = new TextEncoder().encode(forwardOptions.body);
+        forwardHeaders.set("Content-Length", encodedBody.length.toString());
+        console.log(`[PRISMGATE] Forwarding rewritten URL-encoded body: ${forwardOptions.body}`);
+      } else if (credentialSource === "post-json" && requestBodyText) {
+        try {
+          const bodyJson = JSON.parse(requestBodyText);
+          if (bodyJson.username) bodyJson.username = originUsername;
+          else if (bodyJson.user) bodyJson.user = originUsername;
+
+          if (bodyJson.password) bodyJson.password = originPassword;
+          else if (bodyJson.pass) bodyJson.pass = originPassword;
+
+          forwardOptions.body = JSON.stringify(bodyJson);
+          forwardHeaders.set("Content-Type", "application/json; charset=utf-8");
+          const encodedBody = new TextEncoder().encode(forwardOptions.body);
+          forwardHeaders.set("Content-Length", encodedBody.length.toString());
+          console.log(`[PRISMGATE] Forwarding rewritten JSON body: ${forwardOptions.body}`);
+        } catch (e) {
+          forwardOptions.body = requestBodyText;
+        }
+      } else {
+        forwardOptions.body = request.body;
+      }
     }
 
     // 9. Fetch from origin IPTV server and return the modified response
     try {
       const originResponse = await fetch(targetUrl.toString(), forwardOptions);
+      console.log(`[PRISMGATE] Origin response status: ${originResponse.status} ${originResponse.statusText}`);
 
-      // Clone response headers to inject CORS headers
-      const responseHeaders = new Headers(originResponse.headers);
-      for (const [key, value] of Object.entries(CORS_HEADERS)) {
-        responseHeaders.set(key, value);
-      }
+      // Build clean response headers that mimic a standard Xtream Codes server
+      // Smart TV IPTV apps (Smarters Pro on Tizen/webOS) reject responses with Cloudflare-specific headers
+      const buildCleanHeaders = (extraHeaders = {}) => {
+        const clean = new Headers();
+        // Preserve essential origin headers
+        const originContentType = originResponse.headers.get("Content-Type");
+        if (originContentType) clean.set("Content-Type", originContentType);
+        
+        const cacheControl = originResponse.headers.get("Cache-Control");
+        if (cacheControl) clean.set("Cache-Control", cacheControl);
+
+        // Set standard IPTV server headers
+        clean.set("Server", "nginx");
+        clean.set("X-Powered-By", "PHP/7.4.5");
+        clean.set("Access-Control-Allow-Origin", "*");
+        clean.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, HEAD");
+        clean.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+        clean.set("Access-Control-Allow-Credentials", "true");
+        clean.set("Access-Control-Max-Age", "86400");
+        clean.set("Vary", "Accept-Encoding");
+        clean.set("Connection", "keep-alive");
+
+        // Apply any extra headers
+        for (const [k, v] of Object.entries(extraHeaders)) {
+          clean.set(k, v);
+        }
+        return clean;
+      };
 
       // Check if we need to rewrite this response (API calls and playlists)
       const contentType = originResponse.headers.get("Content-Type") || "";
@@ -232,26 +348,55 @@ export default {
         let text = await originResponse.text();
 
         if (isJson) {
+          // Use text-based JSON rewriting to preserve exact origin formatting
+          // (escaped forward slashes, field order, etc.) which Smart TV apps validate
           try {
             const data = JSON.parse(text);
-            
-            // Rewrite user_info to match client credentials
-            if (data && data.user_info) {
-              data.user_info.username = clientUsername;
-              data.user_info.password = clientPassword;
-            }
-            
-            // Rewrite server_info to point to our proxy
+
             if (data && data.server_info) {
-              data.server_info.url = url.hostname;
-              data.server_info.port = url.port || (url.protocol === "https:" ? "443" : "80");
-              data.server_info.https_port = url.protocol === "https:" ? (url.port || "443") : "443";
-              data.server_info.server_protocol = url.protocol.replace(":", "");
+              // Rewrite server_info fields using exact text replacement on the raw JSON
+              const origUrl = data.server_info.url;
+              const origPort = data.server_info.port;
+              const origHttpsPort = data.server_info.https_port;
+              const origProtocol = data.server_info.server_protocol;
+              const newPort = url.port || (url.protocol === "https:" ? "443" : "80");
+              const newHttpsPort = url.protocol === "https:" ? (url.port || "443") : "443";
+              const newProtocol = url.protocol.replace(":", "");
+
+              // Replace server_info fields in the raw text (handles both escaped and unescaped)
+              if (origUrl) {
+                text = text.replaceAll(`"url":"${origUrl}"`, `"url":"${url.hostname}"`);
+                text = text.replaceAll(`"url": "${origUrl}"`, `"url": "${url.hostname}"`);
+              }
+              if (origPort) {
+                text = text.replaceAll(`"port":"${origPort}"`, `"port":"${newPort}"`);
+                text = text.replaceAll(`"port": "${origPort}"`, `"port": "${newPort}"`);
+              }
+              if (origHttpsPort) {
+                text = text.replaceAll(`"https_port":"${origHttpsPort}"`, `"https_port":"${newHttpsPort}"`);
+                text = text.replaceAll(`"https_port": "${origHttpsPort}"`, `"https_port": "${newHttpsPort}"`);
+              }
+              if (origProtocol) {
+                text = text.replaceAll(`"server_protocol":"${origProtocol}"`, `"server_protocol":"${newProtocol}"`);
+                text = text.replaceAll(`"server_protocol": "${origProtocol}"`, `"server_protocol": "${newProtocol}"`);
+              }
             }
-            
-            text = JSON.stringify(data);
+
+            if (data && data.user_info) {
+              // Rewrite user_info fields using text replacement
+              const origUser = data.user_info.username;
+              const origPass = data.user_info.password;
+              if (origUser) {
+                text = text.replaceAll(`"username":"${origUser}"`, `"username":"${clientUsername}"`);
+                text = text.replaceAll(`"username": "${origUser}"`, `"username": "${clientUsername}"`);
+              }
+              if (origPass) {
+                text = text.replaceAll(`"password":"${origPass}"`, `"password":"${clientPassword}"`);
+                text = text.replaceAll(`"password": "${origPass}"`, `"password": "${clientPassword}"`);
+              }
+            }
           } catch (e) {
-            // Fallback to text replacements if JSON parsing fails
+            // Fallback: if JSON parsing fails, just do basic text replacements below
           }
         }
 
@@ -275,22 +420,29 @@ export default {
           text = text.replaceAll(`http://${url.host}`, `https://${url.host}`);
         }
 
-        // Set correct Content-Length header for the modified text
+        // Build a clean response with explicit Content-Length (no chunked encoding)
         const encodedText = new TextEncoder().encode(text);
-        responseHeaders.set("Content-Length", encodedText.length.toString());
+        const cleanHeaders = buildCleanHeaders({
+          "Content-Length": encodedText.length.toString(),
+        });
+        // Ensure Content-Type is set for JSON
+        if (isJson) {
+          cleanHeaders.set("Content-Type", "application/json; charset=utf-8");
+        }
 
         return new Response(encodedText, {
           status: originResponse.status,
           statusText: originResponse.statusText,
-          headers: responseHeaders
+          headers: cleanHeaders
         });
       }
 
       // Default: Return the streaming response directly (e.g. for .ts stream chunks)
+      const streamHeaders = buildCleanHeaders();
       return new Response(originResponse.body, {
         status: originResponse.status,
         statusText: originResponse.statusText,
-        headers: responseHeaders
+        headers: streamHeaders
       });
     } catch (error) {
       console.error("Error fetching from origin IPTV server:", error);
